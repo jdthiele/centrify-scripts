@@ -80,7 +80,12 @@ if [ $DACONF = 0 ]; then
   echo "$DACONF_OUT" | grep "DirectAudit NSS module" | awk '{print $4}' | grep Active > /dev/null || dacontrol -e
   echo "$DACONF_OUT" | grep "DirectAudit is not configured for per command auditing" && dacontrol -r
   for CMD in /bin/su /usr/bin/su /usr/bin/sudo /usr/share/centrifydc/bin/dzdo; do
-    [ ${CMD} = /bin/su ] && ls -ld /bin | grep /usr/bin > /dev/null && continue # if /bin is a symlink to /usr/bin, skip it
+    if [ ${CMD} = /bin/su ]; then # if /bin is a symlink to /usr/bin, skip it
+      ls -ld /bin | grep /usr/bin > /dev/null
+      echo "$DACONF_OUT" | egrep '^   '${CMD}'$' > /dev/null && dacontrol -d -c ${CMD}
+      DACONF_OUT=`dainfo`
+      continue
+    fi
     [ -x ${CMD} ] && { echo "$DACONF_OUT" | egrep '^   '${CMD}'$' > /dev/null || dacontrol -e -c ${CMD}; } # if cmd exists and isn't audited, start auditing
   done
 fi
